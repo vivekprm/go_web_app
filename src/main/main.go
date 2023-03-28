@@ -8,7 +8,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/vivekprm/go_web_app/viewmodels"
+	vm "github.com/vivekprm/go_web_app/src/viewmodels"
 )
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
         var context interface{} = nil
         switch requestedFile {
             case "home":
-            context = viewmodels.GetHome()
+            context = vm.GetHome()
         }
         if template != nil {
             template.Execute(w, context)
@@ -62,7 +62,7 @@ func serveResource(w http.ResponseWriter, req *http.Request) {
 
     if err == nil {
         defer f.Close()
-        w.Header().Add("Content Type", contentType)
+        w.Header().Add("Content-Type", contentType)
         br := bufio.NewReader(f)
         br.WriteTo(w)
     } else {
