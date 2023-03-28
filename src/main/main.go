@@ -1,9 +1,10 @@
 package main
 
 import (
-	"io/ioutil"
+	"bufio"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -14,9 +15,12 @@ func (mh *MyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path[1:]
 	log.Println(path)
 
-	data, err := ioutil.ReadFile(string(path))
+	// data, err := ioutil.ReadFile(string(path))
+	f, err := os.Open(path)
 
 	if err == nil {
+		bufferedReader := bufio.NewReader(f)
+		
 		var contentType string
 		if strings.HasSuffix(path, ".css"){
 			contentType = "text/css"
@@ -28,11 +32,13 @@ func (mh *MyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			contentType = "image/png"
 		} else if strings.HasSuffix(path, ".svg") {
 			contentType = "image/svg+xml"
+		} else if strings.HasSuffix(path, ".mp4") {
+			contentType = "video/mp4"
 		} else {
 			contentType = "text/plain"
 		}
 		w.Header().Add("Content-Type", contentType)
-		w.Write(data)
+		bufferedReader.WriteTo(w)
 	} else {
 		w.WriteHeader(404)
 		w.Write([]byte("404 My Friend - " + http.StatusText(404)))
