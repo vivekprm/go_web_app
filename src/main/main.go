@@ -5,19 +5,9 @@ import (
 	"text/template"
 )
 
-func main() {
-    http.HandleFunc("/", myHandlerFunc)
-    http.ListenAndServe(":8080", nil)
-    // nil means use default ServeMux
-}
-
-func myHandlerFunc(w http.ResponseWriter, req *http.Request) {
-    w.Header().Add("Content Type", "text/html")
-    tmpl, err := template.New("anyNameForTemplate").Parse(doc)
-    if err == nil {
-        tmpl.Execute(w, req.URL.Path[1:])
-        // nil means no data to pass in
-    }
+type Context struct {
+    FirstName string
+    Message string
 }
 
 const doc = `
@@ -28,7 +18,53 @@ const doc = `
     <title>First Template</title>
 </head>
 <body>
-    <h1>Hello {{.}}</h1>
+	{{.}}
+    <h1>My name is {{.FirstName}}</h1>
+    <p>{{.Message}}</p>
 </body>
 </html>
 `
+
+func toddFunc(w http.ResponseWriter, req *http.Request) {
+    w.Header().Add("Content Type", "text/html")
+    tmpl, err := template.New("anyNameForTemplate").Parse(doc)
+    if err == nil {
+        context := Context{"Todd", "more Go, please"}
+        tmpl.Execute(w, context)
+    }
+}
+
+func main() {
+    http.HandleFunc("/todd", toddFunc)
+    http.HandleFunc("/ming", mingFunc)
+    http.HandleFunc("/rio", rioFunc)
+    http.HandleFunc("/", jamesFunc)
+    http.ListenAndServe(":8080", nil)
+}
+
+func mingFunc(w http.ResponseWriter, req *http.Request) {
+    w.Header().Add("Content Type", "text/html")
+    tmpl, err := template.New("anyNameForTemplate").Parse(doc)
+    if err == nil {
+        context := Context{"Ming", "I am a problem solver!"}
+        tmpl.Execute(w, context)
+    }
+}
+
+func rioFunc(w http.ResponseWriter, req *http.Request) {
+    w.Header().Add("Content Type", "text/html")
+    tmpl, err := template.New("anyNameForTemplate").Parse(doc)
+    if err == nil {
+        context := Context{"Rio", "I drank the google-aid"}
+        tmpl.Execute(w, context)
+    }
+}
+
+func jamesFunc(w http.ResponseWriter, req *http.Request) {
+    w.Header().Add("Content Type", "text/html")
+    tmpl, err := template.New("anyNameForTemplate").Parse(doc)
+    if err == nil {
+        context := Context{"James", "Another beer, please"}
+        tmpl.Execute(w, context)
+    }
+}
