@@ -2,12 +2,16 @@ package main
 
 import "net/http"
 
-func main() {
-	myMux := http.NewServeMux()
-	myMux.HandleFunc("/", someFunc)
-	http.ListenAndServe(":8080", myMux)
+type Person struct {
+	fName string
 }
 
-func someFunc(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Hello Universe!"))
+func (p *Person) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("First Name: " + p.fName))
+}
+func main() {
+	person1 := &Person {
+		fName: "Jim",
+	}
+	http.ListenAndServe(":8080", person1)
 }
