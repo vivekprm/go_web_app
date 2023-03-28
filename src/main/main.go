@@ -1,44 +1,85 @@
 package main
 
 import (
-	"io/ioutil"
+	"bufio"
+	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 )
 
-type MyHandler struct {
-}
-
-func (mh *MyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path[1:]
-	log.Println(path)
-
-	data, err := ioutil.ReadFile(string(path))
-
-	if err == nil {
-		var contentType string
-		if strings.HasSuffix(path, ".css"){
-			contentType = "text/css"
-		} else if strings.HasSuffix(path, ".js") {
-			contentType = "application/javascript"
-		} else if strings.HasSuffix(path, ".html") {
-			contentType = "text/html"
-		} else if strings.HasSuffix(path, ".png") {
-			contentType = "image/png"
-		} else if strings.HasSuffix(path, ".svg") {
-			contentType = "image/svg+xml"
-		} else {
-			contentType = "text/plain"
-		}
-		w.Header().Add("Content-Type", contentType)
-		w.Write(data)
-	} else {
-		w.WriteHeader(404)
-		w.Write([]byte("404 My Friend - " + http.StatusText(404)))
-	}
-}
 func main() {
-	http.Handle("/", new(MyHandler))
-	http.ListenAndServe(":8080", nil)
+    templates := populateTemplates()
+
+    http.HandleFunc("/",
+    func(w http.ResponseWriter, req *http.Request) {
+        requestedFile := req.URL.Path[1:]
+        template := templates.Lookup(requestedFile + ".html")
+
+        if template != nil {
+            template.Execute(w, nil)
+        } else {
+            w.WriteHeader(404)
+        }
+    })
+    http.HandleFunc("/img/", serveResource)
+    http.HandleFunc("/css/", serveResource)
+    http.HandleFunc("/scripts/", serveResource)
+    http.ListenAndServe(":8080", nil)
+}
+
+func serveResource(w http.ResponseWriter, req *http.Request) {
+    path := "public" + req.URL.Path
+    var contentType string
+    if strings.HasSuffix(path, ".css") {
+        contentType = "text/css"
+    } else if strings.HasSuffix(path, ".png") {
+        contentType = "image/png"
+    } else if strings.HasSuffix(path, ".jpg") {
+        contentType = "image/jpg"
+    } else if strings.HasSuffix(path, ".svg") {
+        contentType = "image/svg+xml"
+    } else if strings.HasSuffix(path, ".js") {
+        contentType = "application/javascript"
+    } else {
+        contentType = "text/plain"
+    }
+
+    log.Println(path)
+    log.Println(contentType)
+
+    f, err := os.Open(path)
+
+    if err == nil {
+        defer f.Close()
+        w.Header().Add("Content-Type", contentType)
+        br := bufio.NewReader(f)
+        br.WriteTo(w)
+    } else {
+        w.WriteHeader(404)
+    }
+}
+
+func populateTemplates() *template.Template {
+    result := template.New("templates")
+
+    basePath := "templates"
+    templateFolder, _ := os.Open(basePath)
+    defer templateFolder.Close()
+
+    templatePathsRaw, _ := templateFolder.Readdir(-1)
+    // -1 means all of the contents
+    templatePaths := new([]string)
+    for _, pathInfo := range templatePathsRaw {
+        log.Println(pathInfo.Name())
+        if !pathInfo.IsDir() {
+            *templatePaths = append(*templatePaths,
+            basePath + "/" + pathInfo.Name())
+        }
+    }
+
+    result.ParseFiles(*templatePaths...)
+
+    return result
 }
