@@ -1,17 +1,28 @@
 package main
 
-import "net/http"
+import (
+	"io/ioutil"
+	"log"
+	"net/http"
+)
 
-type Person struct {
-	fName string
+type MyHandler struct {
 }
 
-func (p *Person) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("First Name: " + p.fName))
+func (mh *MyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path[1:]
+	log.Println(path)
+
+	data, err := ioutil.ReadFile(string(path))
+
+	if err == nil {
+		w.Write(data)
+	} else {
+		w.WriteHeader(404)
+		w.Write([]byte("404 My Friend - " + http.StatusText(404)))
+	}
 }
 func main() {
-	person1 := &Person {
-		fName: "Jim",
-	}
-	http.ListenAndServe(":8080", person1)
+	http.Handle("/", new(MyHandler))
+	http.ListenAndServe(":8080", nil)
 }
