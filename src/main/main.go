@@ -1,44 +1,70 @@
 package main
 
 import (
-	"io/ioutil"
-	"log"
 	"net/http"
-	"strings"
+	"text/template"
 )
 
-type MyHandler struct {
+type Context struct {
+    FirstName string
+    Message string
+    URL string
+    Beers []string
+    Title string
+
 }
 
-func (mh *MyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path[1:]
-	log.Println(path)
-
-	data, err := ioutil.ReadFile(string(path))
-
-	if err == nil {
-		var contentType string
-		if strings.HasSuffix(path, ".css"){
-			contentType = "text/css"
-		} else if strings.HasSuffix(path, ".js") {
-			contentType = "application/javascript"
-		} else if strings.HasSuffix(path, ".html") {
-			contentType = "text/html"
-		} else if strings.HasSuffix(path, ".png") {
-			contentType = "image/png"
-		} else if strings.HasSuffix(path, ".svg") {
-			contentType = "image/svg+xml"
-		} else {
-			contentType = "text/plain"
-		}
-		w.Header().Add("Content-Type", contentType)
-		w.Write(data)
-	} else {
-		w.WriteHeader(404)
-		w.Write([]byte("404 My Friend - " + http.StatusText(404)))
-	}
-}
 func main() {
-	http.Handle("/", new(MyHandler))
-	http.ListenAndServe(":8080", nil)
+    http.HandleFunc("/", myHandlerFunc)
+    http.ListenAndServe(":8080", nil)
 }
+
+func myHandlerFunc(w http.ResponseWriter, req *http.Request) {
+    w.Header().Add("Content Type", "text/html")
+    templates := template.New("template")
+    templates.New("test").Parse(doc)
+    templates.New("header").Parse(head)
+    templates.New("footer").Parse(foot)
+    context := Context{
+        "Todd",
+        "more beer, please",
+        req.URL.Path,
+        []string{"New Belgium", "La Fin Du Monde", "The Alchemist"},
+        "Favorite Beers",
+    }
+    templates.Lookup("test").Execute(w, context)
+}
+
+const doc = `
+{{template "header" .Title}}
+<body>
+    <h1>{{.FirstName}} says, "{{.Message}}"</h1>
+    {{if eq .URL "/nobeer"}}
+        <h2>We're out of beer, {{.FirstName}}. Sorry!</h2>
+    {{else}}
+        <h2>Yes, grab another beer, {{.FirstName}}</h2>
+        <ul>
+            {{range .Beers}}
+            <li>{{.}}</li>
+            {{end}}
+        </ul>
+    {{end}}
+    <hr>
+    <h2>Here's all the data:</h2>
+    <p>{{.}}</p>
+</body>
+{{template "footer"}}
+`
+
+const head = `
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>{{.}}</title>
+</head>
+`
+
+const foot = `
+</html>
+`
