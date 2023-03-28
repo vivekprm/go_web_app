@@ -1,44 +1,48 @@
 package main
 
 import (
-	"io/ioutil"
-	"log"
+	"html/template"
 	"net/http"
-	"strings"
+	"os"
 )
 
-type MyHandler struct {
-}
-
-func (mh *MyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path[1:]
-	log.Println(path)
-
-	data, err := ioutil.ReadFile(string(path))
-
-	if err == nil {
-		var contentType string
-		if strings.HasSuffix(path, ".css"){
-			contentType = "text/css"
-		} else if strings.HasSuffix(path, ".js") {
-			contentType = "application/javascript"
-		} else if strings.HasSuffix(path, ".html") {
-			contentType = "text/html"
-		} else if strings.HasSuffix(path, ".png") {
-			contentType = "image/png"
-		} else if strings.HasSuffix(path, ".svg") {
-			contentType = "image/svg+xml"
-		} else {
-			contentType = "text/plain"
-		}
-		w.Header().Add("Content-Type", contentType)
-		w.Write(data)
-	} else {
-		w.WriteHeader(404)
-		w.Write([]byte("404 My Friend - " + http.StatusText(404)))
-	}
-}
 func main() {
-	http.Handle("/", new(MyHandler))
-	http.ListenAndServe(":8080", nil)
+    templates := populateTemplates()
+
+    http.HandleFunc("/",
+    func(w http.ResponseWriter, req *http.Request) {
+        requestedFile := req.URL.Path[1:]
+        template := templates.Lookup(requestedFile + ".html")
+
+        if template != nil {
+            template.Execute(w, nil)
+        } else {
+            w.WriteHeader(404)
+        }
+    })
+
+
+    http.ListenAndServe(":8080", nil)
+}
+
+func populateTemplates() *template.Template {
+    result := template.New("templates")
+
+    basePath := "templates"
+    templateFolder, _ := os.Open(basePath)
+    defer templateFolder.Close()
+
+    templatePathsRaw, _ := templateFolder.Readdir(-1)
+    // -1 means all of the contents
+    templatePaths := new([]string)
+    for _, pathInfo := range templatePathsRaw {
+        if !pathInfo.IsDir() {
+            *templatePaths = append(*templatePaths,
+            basePath + "/" + pathInfo.Name())
+        }
+    }
+
+    result.ParseFiles(*templatePaths...)
+
+    return result
 }
