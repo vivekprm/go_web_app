@@ -1,44 +1,34 @@
 package main
 
 import (
-	"io/ioutil"
-	"log"
 	"net/http"
-	"strings"
+	"text/template"
 )
 
-type MyHandler struct {
-}
-
-func (mh *MyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path[1:]
-	log.Println(path)
-
-	data, err := ioutil.ReadFile(string(path))
-
-	if err == nil {
-		var contentType string
-		if strings.HasSuffix(path, ".css"){
-			contentType = "text/css"
-		} else if strings.HasSuffix(path, ".js") {
-			contentType = "application/javascript"
-		} else if strings.HasSuffix(path, ".html") {
-			contentType = "text/html"
-		} else if strings.HasSuffix(path, ".png") {
-			contentType = "image/png"
-		} else if strings.HasSuffix(path, ".svg") {
-			contentType = "image/svg+xml"
-		} else {
-			contentType = "text/plain"
-		}
-		w.Header().Add("Content-Type", contentType)
-		w.Write(data)
-	} else {
-		w.WriteHeader(404)
-		w.Write([]byte("404 My Friend - " + http.StatusText(404)))
-	}
-}
 func main() {
-	http.Handle("/", new(MyHandler))
-	http.ListenAndServe(":8080", nil)
+    http.HandleFunc("/", myHandlerFunc)
+    http.ListenAndServe(":8080", nil)
+    // nil means use default ServeMux
 }
+
+func myHandlerFunc(w http.ResponseWriter, req *http.Request) {
+    w.Header().Add("Content Type", "text/html")
+    tmpl, err := template.New("anyNameForTemplate").Parse(doc)
+    if err == nil {
+        tmpl.Execute(w, req.URL.Path[1:])
+        // nil means no data to pass in
+    }
+}
+
+const doc = `
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>First Template</title>
+</head>
+<body>
+    <h1>Hello {{.}}</h1>
+</body>
+</html>
+`
